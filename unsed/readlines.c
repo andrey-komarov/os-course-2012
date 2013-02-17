@@ -1,4 +1,4 @@
-//#include "readlines.h"
+#include "readlines.h"
 #include <errno.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -15,7 +15,7 @@ typedef struct
     int read_len;
 } BR;
 
-typedef struct
+typedef struct RL
 {
     uchar* buf;
     int fildes;

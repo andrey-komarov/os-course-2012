@@ -1,5 +1,3 @@
-#ifndef readlines_h
-#define readlines_h
 #include <stddef.h>
 
 // Структура, в которой прячется файловый дескриптор, буфер и хозяйственная
@@ -37,4 +35,3 @@ int rl_close(struct RL *rl);
 // заканчивается `\\n`.
 int rl_readline(struct RL *rl, char * buf, size_t buf_size);
 
-#endif
