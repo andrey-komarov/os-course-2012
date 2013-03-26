@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define MAX_ALLOC 0x1000000 // 16 MiB
+#define MAX_ALLOC 0x4000000 // 64 MiB
 
 static char buffer[MAX_ALLOC];
 static size_t used = 0;
@@ -13,13 +13,19 @@ void crash() {
     _exit(1);
 }
 
+// Хватаем из буфера очередной кусок размера size + sizeof(size_r), в начало
+// пишем эту сумму --- длину блока, хвост отдаём. Длина нужна для realloc-а
+//
+// При освобождении халтурим и ничего не делаем
 void * malloc(size_t size) {
+    if (size == 0)
+        return NULL;
     if (size + used > MAX_ALLOC)
     {
-        printf("Overflow!\n");
+        puts("Out of memory :(\n");
         crash();
     }
-    void * ptr = buffer + used;
+    void * ptr = (void*)(buffer + used);
     used += size + sizeof(size_t);
     size_t * size_ptr = (size_t *) ptr;
     *(size_ptr) = size + sizeof(size_t);
@@ -34,12 +40,7 @@ void free(void * ptr) {
 
 size_t ptr_size(void * ptr) {
     size_t * size_ptr = ((size_t *) ptr) - 1;
-    return *(size_ptr);
-}
-
-void * ptr_start(void * ptr) {
-    size_t * size_ptr = ((size_t *) ptr) - 1;
-    return (void *) size_ptr;
+    return *(size_ptr) - sizeof(size_t);
 }
 
 void * realloc(void * ptr, size_t size) {

@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define MAX_ALLOC 0x1000000 // 16 MiB
+#define MAX_ALLOC 0x4000000 // 64 MiB
 
 static void * buffer;
 static int need_init = 1;

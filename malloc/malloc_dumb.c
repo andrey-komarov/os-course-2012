@@ -4,7 +4,6 @@
 #include <string.h>
 
 void * malloc(size_t size) {
-    printf("malloc(%lu)\n", size);
     void * ptr = mmap(NULL, size + sizeof(size_t), PROT_READ | PROT_WRITE,
             MAP_SHARED | MAP_ANONYMOUS, -1, 0);
     if (ptr == MAP_FAILED)
@@ -22,7 +21,6 @@ size_t ptr_size(void * ptr) {
 void free(void * ptr) {
     if (ptr == NULL)
         return;
-    printf("free(%lu)\n", ptr_size(ptr) - sizeof(size_t));
     size_t * size_ptr = ((size_t *) ptr) - 1;
     munmap((void *) size_ptr, *size_ptr);
 }
@@ -36,7 +34,6 @@ void * ptr_start(void * ptr) {
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
 void * realloc(void * ptr, size_t size) {
-    printf("realloc(%lu -> %lu)\n", ptr_size(ptr), size);
     if (ptr == NULL)
         return NULL;
     void * ret_ptr = malloc(size);
@@ -57,11 +54,11 @@ void crash() {
     _exit(1);
 }
 
-int posix_memalign(void **memptr, size_t alignment, size_t size) { crash(); }
-void *aligned_alloc(size_t alignment, size_t size) { crash(); }
-void *valloc(size_t size) { crash(); }
-void *memalign(size_t alignment, size_t size) { crash(); }
-void *pvalloc(size_t size) {crash(); }
+int posix_memalign(void **memptr, size_t alignment, size_t size) { crash(); return 0;}
+void *aligned_alloc(size_t alignment, size_t size) { crash(); return NULL;}
+void *valloc(size_t size) { crash(); return NULL;}
+void *memalign(size_t alignment, size_t size) { crash(); return NULL;}
+void *pvalloc(size_t size) {crash(); return NULL;}
 
 /*
 int main() {
