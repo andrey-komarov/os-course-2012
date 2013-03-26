@@ -4,6 +4,7 @@
 #include <string.h>
 
 void * malloc(size_t size) {
+    printf("malloc(%lu)\n", size);
     void * ptr = mmap(NULL, size + sizeof(size_t), PROT_READ | PROT_WRITE,
             MAP_SHARED | MAP_ANONYMOUS, -1, 0);
     if (ptr == MAP_FAILED)
@@ -13,16 +14,17 @@ void * malloc(size_t size) {
     return (void *) (size_ptr + 1);
 }
 
-void free(void * ptr) {
-    if (ptr == NULL)
-        return;
-    size_t * size_ptr = ((size_t *) ptr) - 1;
-    munmap((void *) size_ptr, *size_ptr);
-}
-
 size_t ptr_size(void * ptr) {
     size_t * size_ptr = ((size_t *) ptr) - 1;
     return *(size_ptr);
+}
+
+void free(void * ptr) {
+    if (ptr == NULL)
+        return;
+    printf("free(%lu)\n", ptr_size(ptr) - sizeof(size_t));
+    size_t * size_ptr = ((size_t *) ptr) - 1;
+    munmap((void *) size_ptr, *size_ptr);
 }
 
 void * ptr_start(void * ptr) {
@@ -34,6 +36,7 @@ void * ptr_start(void * ptr) {
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
 void * realloc(void * ptr, size_t size) {
+    printf("realloc(%lu -> %lu)\n", ptr_size(ptr), size);
     if (ptr == NULL)
         return NULL;
     void * ret_ptr = malloc(size);
