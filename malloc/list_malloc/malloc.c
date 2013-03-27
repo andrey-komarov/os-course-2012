@@ -32,7 +32,7 @@ void print_freelist(free_block_t * block)
         printf ("[]\n");
     else
     {
-        printf("at %x free %lu :: ", &block, block->size);
+        printf("at %x free %lu :: ", block, block->size);
         print_freelist(block->next);
     }
 }
@@ -51,7 +51,7 @@ size_t get_size(void * ptr)
 size_t adjust(size_t size)
 {
     size += sizeof(occupied_block_t) + sizeof(free_block_t);
-    size = (size / PAGE_SIZE + 2) * PAGE_SIZE;
+    size = (size / PAGE_SIZE + 1) * PAGE_SIZE;
     return size;
 }
 
@@ -61,7 +61,7 @@ occupied_block_t * shrink(free_block_t* current, size_t size)
     char * begin = (char*)current;
     size_t new_size = current->size - size - sizeof(occupied_block_t);
     current->size = new_size;
-    occupied_block_t * res = (occupied_block_t*)(begin + new_size);
+    occupied_block_t * res = (occupied_block_t*)(begin + new_size + sizeof(free_block_t));
     res->size = size;
     return res;
 }
