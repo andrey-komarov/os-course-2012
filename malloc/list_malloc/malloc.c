@@ -10,12 +10,14 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
+// size --- без учёта себя
 typedef struct free_block_t
 {
     size_t size;
     struct free_block_t * next;
 } free_block_t;
 
+// size --- без учёта себя
 typedef struct occupied_block_t
 {
     size_t size;
@@ -24,10 +26,32 @@ typedef struct occupied_block_t
 
 static free_block_t * head = NULL;
 
+void print_freelist(free_block_t * block)
+{
+    if (block == NULL)
+        printf ("[]\n");
+    else
+    {
+        printf("at %x free %lu :: ", &block, block->size);
+        print_freelist(block->next);
+    }
+}
+
+occupied_block_t * get_occ(void * ptr)
+{
+    return (occupied_block_t*)(ptr - sizeof(occupied_block_t));
+}
+
+size_t get_size(void * ptr)
+{
+    return get_occ(ptr)->size;
+}
+
+// округлить вверх до кратного PAGE_SIZE
 size_t adjust(size_t size)
 {
     size += sizeof(occupied_block_t) + sizeof(free_block_t);
-    size = (size / PAGE_SIZE + 1) * PAGE_SIZE;
+    size = (size / PAGE_SIZE + 2) * PAGE_SIZE;
     return size;
 }
 
@@ -42,48 +66,53 @@ occupied_block_t * shrink(free_block_t* current, size_t size)
     return res;
 }
 
-void * malloc(size_t size)
+// Находит первый блок, в который можно утолкать size байт
+free_block_t * find_large_enough(size_t size)
 {
     free_block_t * current = head;
     while (current != NULL)
     {
         if (current->size >= size + sizeof(occupied_block_t) + sizeof(free_block_t))
-            break;
+            return current;
         current = current->next;
     }
-    if (current != NULL)
-    {
-        occupied_block_t * res = shrink(current, size);
-        return res->elems;
-    }
-    else
-    {
-        size_t bsz = adjust(size);
-        void * ptr = mmap(NULL, bsz, PROT_READ | PROT_WRITE,
+    return NULL;
+}
+
+// выделить блок, в который влезет size байт
+free_block_t * new_block(size_t size)
+{
+    size_t bsz = adjust(size);
+    void * ptr = mmap(NULL, bsz, PROT_READ | PROT_WRITE, 
             MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-        free_block_t * new_head = (free_block_t*)ptr;
-        new_head->size = bsz;
-        new_head->next = head;
-        head = new_head;
-        occupied_block_t * res = shrink(new_head, size);
-        return res->elems;
+    free_block_t * new = (free_block_t*)ptr;
+    new->size = bsz - sizeof(free_block_t);
+    new->next = NULL;
+    return new;
+}
+
+void * malloc(size_t size)
+{
+    free_block_t * current = find_large_enough(size);
+    if (current == NULL)
+    {
+        free_block_t * new = new_block(size);
+        new->next = head;
+        current = head = new;
     }
+    void * res = shrink(current, size)->elems;
+    return res;
 }
 
 void free(void * ptr) {
     return;
 }
 
-size_t ptr_size(void * ptr) {
-    size_t * size_ptr = ((size_t *) ptr) - 1;
-    return *(size_ptr);
-}
-
 void * realloc(void * ptr, size_t size) {
     if (ptr == NULL)
         return NULL;
     void * ret_ptr = malloc(size);
-    memcpy(ret_ptr, ptr, MIN(ptr_size(ptr), size));
+    memcpy(ret_ptr, ptr, MIN(get_size(ptr), size));
     free(ptr);
     return ret_ptr;
 }
@@ -106,22 +135,18 @@ void *valloc(size_t size) { crash(); }
 void *memalign(size_t alignment, size_t size) { crash(); }
 void *pvalloc(size_t size) {crash(); }
 
-
 /*
+
 int main()
 {
-    int ** a = (int**)(malloc(sizeof(int*) * 1000));
     int i;
-    for (i = 0; i < 1000; i++)
+    for (i = 0; i < 10000; i++)
     {
-        a[i] = (int*)(malloc(sizeof(int)));
-        *a[i] = i % 10;
-        int j;
-        for (j = 0; j <= i; j++)
-            printf("%d", *a[j]);
-        printf("\n");
+        int * a = (int*)(malloc(sizeof(int)));
+        *a = i;
+    //    printf("%d ", *a);
     }
-//    printf("%d", *a);
+    return 0;
 }
-*/
 
+*/
