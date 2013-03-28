@@ -70,6 +70,8 @@ block_t * new_superblock(size_t size)
 {
     void * ptr = mmap(NULL, size, PROT_READ | PROT_WRITE,
             MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    if (ptr == MAP_FAILED)
+        return NULL;
     char * cptr = (char*)ptr;
     block_t * left_bound = init_bounding_block(ptr);
     init_bounding_block(cptr + size - sizeof(block_t));
@@ -187,6 +189,8 @@ void * malloc(size_t size)
     else
     {
         block_t * new = new_superblock(adjust(size));
+        if (new == NULL)
+            return NULL;
         set_head(new);
         cur = head;
     }
@@ -197,6 +201,15 @@ void * malloc(size_t size)
     return elems(res);
 }
 
+int try_merge(block_t * me, block_t * next)
+{
+    if (me->flags != BLK_FREE || next->flags != BLK_FREE)
+        return 0;
+    remove_from_list(next);
+    me->size += next->size + sizeof(block_t);
+    return 1;
+}
+
 void free(void * ptr)
 {
     if (ptr == NULL)
@@ -204,6 +217,9 @@ void free(void * ptr)
     block_t * cur = block_by_addr(ptr);
     cur->flags = BLK_FREE;
     set_head(cur);
+    block_t * pred = cur->prev_in_superblock;
+    try_merge(cur, next_in_superblock(cur));
+    try_merge(pred, next_in_superblock(pred));
 }
 
 void * realloc(void * ptr, size_t size) {
