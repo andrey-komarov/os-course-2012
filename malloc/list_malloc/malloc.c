@@ -39,7 +39,7 @@ void print_freelist(free_block_t * block)
 
 occupied_block_t * get_occ(void * ptr)
 {
-    return (occupied_block_t*)(ptr - sizeof(occupied_block_t));
+    return (occupied_block_t*)(((char*)ptr) - sizeof(occupied_block_t));
 }
 
 size_t get_size(void * ptr)
@@ -93,6 +93,8 @@ free_block_t * new_block(size_t size)
 
 void * malloc(size_t size)
 {
+    printf("====================================\n");
+    printf("malloc %lu\n", size);
     free_block_t * current = find_large_enough(size);
     if (current == NULL)
     {
@@ -101,11 +103,22 @@ void * malloc(size_t size)
         current = head = new;
     }
     void * res = shrink(current, size)->elems;
+    printf("... at %x\n", res);
+    print_freelist(head);
     return res;
 }
 
 void free(void * ptr) {
-    return;
+    if (ptr == NULL)
+        return;
+    printf("====================================\n");
+    printf("free %x\n", ptr);
+    occupied_block_t * occ = get_occ(ptr);
+    free_block_t * new_free = (free_block_t*)occ;
+    new_free->size = occ->size + sizeof(occupied_block_t) - sizeof(free_block_t);
+    new_free->next = head;
+    head = new_free;
+    print_freelist(head);
 }
 
 void * realloc(void * ptr, size_t size) {
