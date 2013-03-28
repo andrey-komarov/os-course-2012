@@ -46,6 +46,15 @@ void set_head(block_t * block)
     head->prev = NULL;
 }
 
+void remove_from_list(block_t* block)
+{
+    if (block->prev != NULL)
+        block->prev->next = block->next;
+    if (block->next != NULL)
+        block->next->prev = block->prev;
+    if (block == head)
+        head = block->next;
+}
 
 block_t * init_bounding_block(void * ptr)
 {
@@ -88,6 +97,8 @@ void print_my_superblock(block_t * block)
     {
         if (cur->flags & BLK_FREE)
             printf("F %lu; ", cur->size);
+        else
+            printf("O %lu; ", cur->size);
         cur = next_in_superblock(cur);
     }
     printf("]\n");
@@ -105,21 +116,18 @@ void print_freelist()
     printf("]\n");
 }
 
+size_t adjust(size_t size)
+{
+    size += 3 * sizeof(block_t);
+    size = (size / PAGE_SIZE + 1) * PAGE_SIZE;
+    return size;
+}
+
 void attach(block_t * block)
 {
     if (head != NULL)
         head->prev = block;
     set_head(block);
-}
-
-void remove_from_list(block_t* block)
-{
-    if (block->prev != NULL)
-        block->prev->next = block->next;
-    if (block->next != NULL)
-        block->next->prev = block->prev;
-    if (block == head)
-        head = block->next;
 }
 
 // Откусить от блока кусок, достаточный для выделения size байт и положить его
@@ -156,9 +164,37 @@ block_t* block_by_addr(void* ptr)
     return (block_t*)(cptr - sizeof(block_t));
 }
 
+block_t * find_large_enough(size_t size)
+{
+    block_t * cur = head;
+    while (cur != NULL)
+    {
+        if (cur->size >= size)
+            return cur;
+        cur = cur->next;
+    }
+    return NULL;
+}
+
 void * malloc(size_t size)
 {
-    return NULL;
+    block_t * cur = find_large_enough(size);
+    if (cur != NULL)
+    {
+        remove_from_list(cur);
+        set_head(cur);
+    }
+    else
+    {
+        block_t * new = new_superblock(adjust(size));
+        set_head(new);
+        cur = head;
+    }
+    shrink(head, size);
+    block_t* res = head;
+    remove_from_list(head);
+    res->flags = 0;
+    return res->elems;
 }
 
 void free(void * ptr)
@@ -196,10 +232,11 @@ void *pvalloc(size_t size) {crash(); }
 
 int main()
 {
-    block_t* b = new_superblock(PAGE_SIZE);
-    shrink(b, 1000);
-    shrink(head, 200);
-    shrink(head, 188);
-    print_my_superblock(b);
+    malloc(1);
+    malloc(22);
+    malloc(1230);
+    malloc(10000);
+    print_my_superblock(head);
+    print_freelist();
     return 0;
 }
