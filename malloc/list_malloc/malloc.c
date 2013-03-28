@@ -197,8 +197,10 @@ void * malloc(size_t size)
     return elems(res);
 }
 
-void free1(void * ptr)
+void free(void * ptr)
 {
+    if (ptr == NULL)
+        return;
     block_t * cur = block_by_addr(ptr);
     cur->flags = BLK_FREE;
     set_head(cur);
@@ -209,7 +211,7 @@ void * realloc(void * ptr, size_t size) {
         return NULL;
     void * ret_ptr = malloc(size);
     memcpy(ret_ptr, ptr, MIN(block_by_addr(ptr)->size, size));
-    free1(ptr);
+    free(ptr);
     return ret_ptr;
 }
 
