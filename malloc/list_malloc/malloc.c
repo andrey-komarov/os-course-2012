@@ -3,8 +3,6 @@
 #include <string.h>
 #include <stdio.h>
 
-#include <assert.h>
-
 #include "malloc.h"
 
 #define PAGE_SIZE 4096
@@ -42,8 +40,10 @@ static block_t * head = NULL;
 void set_head(block_t * block)
 {
     block->next = head;
+    block->prev = NULL;
+    if (head != NULL)
+        head->prev = block;
     head = block;
-    head->prev = NULL;
 }
 
 void remove_from_list(block_t* block)
@@ -54,18 +54,19 @@ void remove_from_list(block_t* block)
         block->next->prev = block->prev;
     if (block == head)
         head = block->next;
+    block->next = block->prev = NULL;
 }
 
 block_t * init_bounding_block(void * ptr)
 {
     block_t * block = (block_t*) ptr;
     block->flags = BLK_BOUND;
+    block->size = 0;
     return block;
 }
 
 block_t * new_superblock(size_t size)
 {
-    assert (size > 3 * sizeof(block_t));
     void * ptr = mmap(NULL, size, PROT_READ | PROT_WRITE,
             MAP_SHARED | MAP_ANONYMOUS, -1, 0);
     char * cptr = (char*)ptr;
@@ -121,13 +122,6 @@ size_t adjust(size_t size)
     size += 3 * sizeof(block_t);
     size = (size / PAGE_SIZE + 1) * PAGE_SIZE;
     return size;
-}
-
-void attach(block_t * block)
-{
-    if (head != NULL)
-        head->prev = block;
-    set_head(block);
 }
 
 // Откусить от блока кусок, достаточный для выделения size байт и положить его
@@ -230,13 +224,14 @@ void *memalign(size_t alignment, size_t size) { crash(); }
 void *pvalloc(size_t size) {crash(); }
 */
 
+/*
 int main()
 {
-    malloc(1);
-    malloc(22);
-    malloc(1230);
-    malloc(10000);
-    print_my_superblock(head);
-    print_freelist();
+    int i;
+    for (i = 0; i < 100; i++)
+    {
+        malloc(2000 + i + 1);
+    }
     return 0;
 }
+*/
