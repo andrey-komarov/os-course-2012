@@ -83,7 +83,7 @@ void print_my_superblock(block_t * block)
     while (cur->prev_in_superblock != NULL)
         cur = cur->prev_in_superblock;
     cur = next_in_superblock(cur);
-    printf("(%x)[", block);
+    printf("(%lx)[", (size_t)block);
     while (!(cur->flags & BLK_BOUND))
     {
         if (cur->flags & BLK_FREE)
@@ -199,6 +199,7 @@ int main()
     block_t* b = new_superblock(PAGE_SIZE);
     shrink(b, 1000);
     shrink(head, 200);
+    shrink(head, 188);
     print_my_superblock(b);
     return 0;
 }
