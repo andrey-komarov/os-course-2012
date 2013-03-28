@@ -206,6 +206,7 @@ int try_merge(block_t * me, block_t * next)
     if (me->flags != BLK_FREE || next->flags != BLK_FREE)
         return 0;
     remove_from_list(next);
+    next_in_superblock(next)->prev_in_superblock = me;
     me->size += next->size + sizeof(block_t);
     return 1;
 }
