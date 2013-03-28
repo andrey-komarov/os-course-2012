@@ -3,6 +3,8 @@
 #include <string.h>
 #include <stdio.h>
 
+#include <stdlib.h>
+
 #include "malloc.h"
 
 #define PAGE_SIZE 4096
@@ -32,7 +34,6 @@ typedef struct block_t
     struct block_t * prev_in_superblock;
     size_t size; // Чистый размер. Вот столько можно дать памяти
     int flags;
-    char elems[];
 } block_t;
 
 static block_t * head = NULL;
@@ -170,6 +171,11 @@ block_t * find_large_enough(size_t size)
     return NULL;
 }
 
+void * elems(block_t * block)
+{
+    return (void*)(((char*)block) + sizeof(block_t));
+}
+
 void * malloc(size_t size)
 {
     block_t * cur = find_large_enough(size);
@@ -188,11 +194,14 @@ void * malloc(size_t size)
     block_t* res = head;
     remove_from_list(head);
     res->flags = 0;
-    return res->elems;
+    return elems(res);
 }
 
-void free(void * ptr)
+void free1(void * ptr)
 {
+    block_t * cur = block_by_addr(ptr);
+    cur->flags = BLK_FREE;
+    set_head(cur);
 }
 
 void * realloc(void * ptr, size_t size) {
@@ -200,7 +209,7 @@ void * realloc(void * ptr, size_t size) {
         return NULL;
     void * ret_ptr = malloc(size);
     memcpy(ret_ptr, ptr, MIN(block_by_addr(ptr)->size, size));
-    free(ptr);
+    free1(ptr);
     return ret_ptr;
 }
 
@@ -216,21 +225,29 @@ void crash() {
     _exit(1);
 }
 
-/*
-int posix_memalign(void **memptr, size_t alignment, size_t size) { crash(); }
-void *aligned_alloc(size_t alignment, size_t size) { crash(); }
-void *valloc(size_t size) { crash(); }
-void *memalign(size_t alignment, size_t size) { crash(); }
-void *pvalloc(size_t size) {crash(); }
-*/
+int posix_memalign(void **memptr, size_t alignment, size_t size) { crash(); return 0;}
+void *aligned_alloc(size_t alignment, size_t size) { crash(); return NULL;}
+void *valloc(size_t size) { crash(); return NULL;}
+void *memalign(size_t alignment, size_t size) { crash(); return NULL;}
+void *pvalloc(size_t size) {crash(); return NULL;}
 
 /*
 int main()
 {
     int i;
+    void** a = (void**)malloc(100 * sizeof(void*));
+    int fr = 0;
+    int all = 0;
     for (i = 0; i < 100; i++)
     {
-        malloc(2000 + i + 1);
+        if ((rand() & 1) && (fr < all))
+        {
+            free1(a[fr++]);
+        }
+        else
+        {
+            a[all++] = (void*)malloc(2000 + i + 1);
+        }
     }
     return 0;
 }
