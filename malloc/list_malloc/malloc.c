@@ -74,6 +74,7 @@ block_t * new_superblock(size_t size)
         return NULL;
     char * cptr = (char*)ptr;
     block_t * left_bound = init_bounding_block(ptr);
+    left_bound->size = size;
     init_bounding_block(cptr + size - sizeof(block_t));
     block_t * main_block = (block_t*)(cptr + sizeof(block_t));
     main_block->prev = NULL;
@@ -145,6 +146,7 @@ void shrink(block_t * block, size_t size)
         b2->flags = BLK_FREE;
         b2->size = block->size - sizeof(block_t) - size;
         b1->size = size;
+        next_in_superblock(b2)->prev_in_superblock = b2;
         set_head(b2);
         set_head(b1);
     }
@@ -180,6 +182,8 @@ void * elems(block_t * block)
 
 void * malloc(size_t size)
 {
+    if (size == 0)
+        return NULL;
     block_t * cur = find_large_enough(size);
     if (cur != NULL)
     {
@@ -221,6 +225,16 @@ void free(void * ptr)
     block_t * pred = cur->prev_in_superblock;
     try_merge(cur, next_in_superblock(cur));
     try_merge(pred, next_in_superblock(pred));
+    return; // Modern computer has enough RAM. No need to unmap
+    if (pred->flags == BLK_FREE &&
+        pred->prev_in_superblock->flags == BLK_BOUND && 
+        next_in_superblock(pred)->flags == BLK_BOUND)
+    {
+        print_my_superblock(pred);
+        remove_from_list(pred);
+        block_t * prepred = pred->prev_in_superblock;
+        munmap((void*)prepred, prepred->size);
+    }
 }
 
 void * realloc(void * ptr, size_t size) {
@@ -261,7 +275,7 @@ int main()
     {
         if ((rand() & 1) && (fr < all))
         {
-            free1(a[fr++]);
+            free(a[fr++]);
         }
         else
         {
