@@ -7,7 +7,7 @@
 
 #include <stdio.h>
 
-#define BUFSIZE 1024
+#define BUFSIZE 4
 
 typedef struct pollfd pollfd;
 
@@ -24,8 +24,8 @@ int main(int argc, char** argv)
     int i;
     for (i = 0; i < n; i++)
     {
-        fds[2 * i].fd = atoi(argv[2 * i]); // TODO check `atoi` result
-        fds[2 * i + 1].fd = atoi(argv[2 * i + 1]); // TODO same
+        fds[2 * i].fd = atoi(argv[1 + 2 * i]); // TODO check `atoi` result
+        fds[2 * i + 1].fd = atoi(argv[1 + 2 * i + 1]); // TODO same
         fds[2 * i].events = POLLIN;
         fds[2 * i + 1].events = POLLOUT;
     }
@@ -55,9 +55,9 @@ int main(int argc, char** argv)
                 }
                 if (fds[2 * i + 1].revents & POLLOUT)
                 {
-                    ssize_t w = write(fds[2 * i + 1].fd, bufs[i], bufpos[i]);
+                    int w = write(fds[2 * i + 1].fd, bufs[i], bufpos[i]);
                     memmove(bufs[i], bufs[i] + w, w);
-                    bufpos -= w;
+                    bufpos[i] -= w;
                     if (bufpos[i] < BUFSIZE)
                         fds[2 * i].events |= POLLIN;
                     if (bufpos[i] == 0)
