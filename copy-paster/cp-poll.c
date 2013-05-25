@@ -7,7 +7,7 @@
 
 #include <stdio.h>
 
-#define BUFSIZE 4
+#define BUFSIZE (1 << 13)
 
 typedef struct pollfd pollfd;
 
@@ -36,9 +36,9 @@ int main(int argc, char** argv)
     int* bufpos = (int*)malloc(n * sizeof(int*));
     memset(bufpos, 0, n * sizeof(int*));
 
-    while (1)
+    while (n)
     {
-        int res = poll(fds, 2 * n, 0);
+        int res = poll(fds, 2 * n, 1000);
         if (res > 0)
         {
             for (i = 0; i < n; i++)
@@ -47,6 +47,12 @@ int main(int argc, char** argv)
                 {
                     int freesp = BUFSIZE - bufpos[i];
                     int rd = read(fds[2 * i].fd, bufs[i], freesp);
+                    if (rd == 0)
+                    {
+                        n--;
+                        fds[2 * i] = fds[2 * n];
+                        fds[2 * i + 1] = fds[2 * n + 1];
+                    }
                     bufpos[i] += rd;
                     if (bufpos[i] == BUFSIZE)
                         fds[2 * i].events &= ~POLLIN;
