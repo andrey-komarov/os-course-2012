@@ -36,9 +36,9 @@ int main(int argc, char** argv)
     int* bufpos = (int*)malloc(n * sizeof(int*));
     memset(bufpos, 0, n * sizeof(int*));
 
-    while (true)
+    while (1)
     {
-        res = poll(fds, 2 * n, 0);
+        int res = poll(fds, 2 * n, 0);
         if (res > 0)
         {
             for (i = 0; i < n; i++)
@@ -49,11 +49,19 @@ int main(int argc, char** argv)
                     int rd = read(fds[2 * i].fd, bufs[i], freesp);
                     bufpos[i] += rd;
                     if (bufpos[i] == BUFSIZE)
-                        fds[2 * i] ^= POLLIN;
+                        fds[2 * i].events &= ~POLLIN;
+                    if (bufpos[i] != 0)
+                        fds[2 * i + 1].events |= POLLOUT;
                 }
-                if (fds[2 * i].revents & POLLOUT)
+                if (fds[2 * i + 1].revents & POLLOUT)
                 {
-                    
+                    ssize_t w = write(fds[2 * i + 1].fd, bufs[i], bufpos[i]);
+                    memmove(bufs[i], bufs[i] + w, w);
+                    bufpos -= w;
+                    if (bufpos[i] < BUFSIZE)
+                        fds[2 * i].events |= POLLIN;
+                    if (bufpos[i] == 0)
+                        fds[2 * i + 1].events &= ~POLLOUT;
                 }
             }
         }
