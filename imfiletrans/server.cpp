@@ -1,4 +1,5 @@
 #include <iostream>
+#include <map>
 
 #include<sys/types.h>
 #include<sys/socket.h>
@@ -11,6 +12,55 @@
 #include <sys/epoll.h>
 
 using namespace std;
+
+struct Event;
+map<int, Event*> senders;
+map<int, Event*> receivers;
+
+#define BUFSIZE (32 * (1 << 20))
+struct Event 
+{
+    enum Type { UNDEF, SENDER, RECEIVER };
+    int fd;
+    Type type;
+    char buf[BUFSIZE];
+    int bufpos;
+    int token;
+
+    Event() {}
+
+    Event(int fd) 
+        : fd(fd)
+        , type(UNDEF)
+        , bufpos(0)
+    {}
+
+    void runUndef()
+    {
+        printf("processing undefiend %d\n, pos %d", fd, bufpos);
+        int n = read(fd, buf + bufpos, BUFSIZE - bufpos);
+        if (n < 0)
+        {
+            perror("read");
+            exit(1);
+        }
+        bufpos += n;
+        if (bufpos >= 5)
+        {
+            if (buf[0] == 's' && buf[1] == 'e' && buf[2] == 'n' && buf[3] == 'd' && buf[4] == '\n')
+            {
+                type = SENDER;
+                token = rand();
+            }
+        }
+    }
+
+    void run()
+    {
+        if (type == UNDEF)
+            runUndef();
+    }
+}
 
 int main()
 {
@@ -96,14 +146,18 @@ int main()
                     continue;
                 }
                 printf("accepted, %d\n", newfd);
+                printf("%d\n", rand());
                 int pid = fork();
                 if (pid == 0)
                 {
                     close(sockfd);
                     dup2(newfd, 0);
                     dup2(newfd, 1);
-                    dup2(newfd, 2);
+//                    dup2(newfd, 2);
                     close(newfd);
+                    char BUF[1000];
+                    int n = read(0, BUF, 1000);
+                    write(2, BUF, n);
                     execlp("echo", "echo", "hello", NULL);
                     exit(0);
                 }
