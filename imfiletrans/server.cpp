@@ -1,8 +1,8 @@
 #include <iostream>
 #include <map>
 
-#include<sys/types.h>
-#include<sys/socket.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 #include <netdb.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -78,7 +78,7 @@ struct Event
             if (strncmp("send\n", buf, 5) == 0)
             {
                 type = SENDER;
-                memmove(buf + 5, buf, bufpos - 5);
+                memmove(buf, buf + 5, bufpos - 5);
                 bufpos -= 5;
                 token = rand();
                 senders[token] = this;
@@ -92,8 +92,9 @@ struct Event
             else if (strncmp("recv\n", buf, 5) == 0)
             {
                 type = RECEIVER;
-                memmove(buf + 5, buf, bufpos - 5);
+                memmove(buf, buf + 5, bufpos - 5);
                 bufpos -= 5;
+                buf[bufpos] = 0;
                 done = false;
             }
             else
@@ -120,9 +121,6 @@ struct Event
                 needSend = true;
             }
         }
-        else
-        {
-        }
 
         if ((ev.events & EPOLLOUT) && outbufWritten < outbufNeed)
         {
@@ -136,7 +134,6 @@ struct Event
         if (ev.events == 0)
         {
             epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, &ev);
-            delete[](buf);
             close(fd);
         }
     }
@@ -146,17 +143,36 @@ struct Event
         if (!done)
         {
             int n = read(fd, buf, BUFSIZE - bufpos);
+            printf("read %d bytes in receiver\n", n);
+            printf("buf = %s\n", buf);
             bufpos += n;
             if (n == 0)
             {
                 done = true;
                 token = atoi(buf);
-                printf("receive token %d\n", token);
+                printf("received token %d\n", token);
+                dual = senders[token];
+                dual->dual = this;
+                bufpos = 0;
             }
         }
         else
         {
-
+            int n = write(fd, dual->buf + bufpos, dual->bufpos - bufpos);
+            if (n == 0)
+            {
+                printf("%d sending done\n", fd);
+            }
+            bufpos += n;
+            if (bufpos == dual->bufpos && dual->done)
+            {
+                printf("sending %d to %d done\n", token, fd);
+                ev.events = 0;
+                epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, &ev);
+                delete[](buf);
+                delete[](dual->buf);
+                close(fd);
+            }
         }
     }
 
