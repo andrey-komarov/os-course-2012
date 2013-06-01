@@ -110,8 +110,9 @@ struct Event
         printf("events = %d IN = %d OUT = %d\n", ev.events, EPOLLIN, EPOLLOUT);
         if (!done)
         {
-            int n = read(fd, buf, BUFSIZE - bufpos);
+            int n = read(fd, buf + bufpos, BUFSIZE - bufpos);
             bufpos += n;
+            printf("read %d bytes total %d\n", n, bufpos);
             if (n == 0) 
             {
                 done = true;
@@ -151,6 +152,15 @@ struct Event
                 done = true;
                 token = atoi(buf);
                 printf("received token %d\n", token);
+                if (!senders.count(token))
+                {
+                    delete[](buf);
+                    epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, &ev);
+                    printf("no such token: %d\n", token);
+                    close(fd);
+                    return;
+                }
+
                 dual = senders[token];
                 dual->dual = this;
                 bufpos = 0;
@@ -164,6 +174,7 @@ struct Event
                 printf("%d sending done\n", fd);
             }
             bufpos += n;
+            printf("%d sent total %d/%d\n", fd, bufpos, dual->bufpos);
             if (bufpos == dual->bufpos && dual->done)
             {
                 printf("sending %d to %d done\n", token, fd);
@@ -171,6 +182,7 @@ struct Event
                 epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, &ev);
                 delete[](buf);
                 delete[](dual->buf);
+                senders.erase(token);
                 close(fd);
             }
         }
