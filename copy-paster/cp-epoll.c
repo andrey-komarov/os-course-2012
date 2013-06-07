@@ -8,7 +8,7 @@
 
 #include <stdio.h>
 
-#define BUFSIZE (1 << 13)
+#define BUFSIZE (1 << 3)
 
 typedef struct epoll_event epoll_event;
 
@@ -40,7 +40,7 @@ int main(int argc, char** argv)
         events[2 * i].events = EPOLLIN;
         events[2 * i + 1].data.u32 = 2 * i + 1;
         events[2 * i + 1].events = 0;
-        epoll_ctl(epollfd, EPOLL_CTL_ADD, fds[i], &events[2 * i]);
+        epoll_ctl(epollfd, EPOLL_CTL_ADD, fds[2 * i], &events[2 * i]);
     }
 
     char** bufs = (char**)malloc(n * sizeof(char*));
@@ -97,7 +97,7 @@ int main(int argc, char** argv)
                 int me = revents[i].data.u32;
                 int dual = me ^ 1;
                 int id = me / 2;
-                int w = write(fds[dual], bufs[id], bufpos[id]);
+                int w = write(fds[me], bufs[id], bufpos[id]);
                 //printf("w %d to %d\n", w, fds[me]);
                 memmove(bufs[id], bufs[id] + w, w);
                 bufpos[id] -= w;
