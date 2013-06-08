@@ -55,7 +55,7 @@ int main(int argc, char** argv)
     while (n)
     {
         int nfds = epoll_wait(epollfd, revents, 2 * n, -1);
-        //printf("nfds = %d\n", nfds);
+        printf("nfds = %d\n", nfds);
         if (nfds < 0)
         {
             perror("epoll_wait");
@@ -69,25 +69,25 @@ int main(int argc, char** argv)
                 int me = revents[i].data.u32;
                 int dual = me ^ 1;
                 int id = me / 2;
-                int freesp = BUFSIZE - bufpos[i];
+                int freesp = BUFSIZE - bufpos[id];
                 int rd = read(fds[me], bufs[id], freesp);
-                //printf("r %d from %d\n", rd, fds[me]);
+                printf("r %d from %d\n", rd, fds[me]);
                 if (rd == 0)
                 {
                     n--;
                     epoll_ctl(epollfd, EPOLL_CTL_DEL, fds[me], &events[me]);
                     done[id] = 1;
                 }
-                bufpos[i] += rd;
-                if (bufpos[i] == BUFSIZE && !done[id])
+                bufpos[id] += rd;
+                if (bufpos[id] == BUFSIZE && !done[id])
                 {
-                    //printf("disabling reading from %d\n", fds[me]);
+                    printf("disabling reading from %d\n", fds[me]);
                     events[me].events &= ~EPOLLIN;
                     epoll_ctl(epollfd, EPOLL_CTL_DEL, fds[me], &events[me]);
                 }
-                if (bufpos[i] != 0 && !(events[dual].events & EPOLLOUT))
+                if (bufpos[id] != 0 && !(events[dual].events & EPOLLOUT))
                 {
-                    //printf("enabling writing to %d\n", fds[dual]);
+                    printf("enabling writing to %d\n", fds[dual]);
                     events[dual].events |= EPOLLOUT;
                     epoll_ctl(epollfd, EPOLL_CTL_ADD, fds[dual], &events[dual]);
                 }
@@ -98,18 +98,18 @@ int main(int argc, char** argv)
                 int dual = me ^ 1;
                 int id = me / 2;
                 int w = write(fds[me], bufs[id], bufpos[id]);
-                //printf("w %d to %d\n", w, fds[me]);
+                printf("w %d to %d\n", w, fds[me]);
                 memmove(bufs[id], bufs[id] + w, w);
                 bufpos[id] -= w;
                 if (bufpos[id] < BUFSIZE && !(events[dual].events & EPOLLIN))
                 {
-                    //printf("enabling reading from %d\n", fds[dual]);
+                    printf("enabling reading from %d\n", fds[dual]);
                     events[dual].events |= EPOLLIN;
                     epoll_ctl(epollfd, EPOLL_CTL_ADD, fds[dual], &events[dual]);
                 }
                 if (bufpos[id] == 0)
                 {
-                    //printf("disabling writing to %d\n", fds[me]);
+                    printf("disabling writing to %d\n", fds[me]);
                     events[me].events &= ~EPOLLOUT;
                     epoll_ctl(epollfd, EPOLL_CTL_DEL, fds[me], &events[me]);
                 }
