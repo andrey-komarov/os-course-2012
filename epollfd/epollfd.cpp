@@ -35,13 +35,48 @@ struct buffer
     }
 };
 
-struct epollfd;
-typedef std::function<void(epollfd&, int, buffer&)> acont;
-
 struct epollfd
 {
-    epollfd();
+    epollfd(int epfd, int fd, int events, std::function<void()>);
+    epollfd(epollfd&&);
+    epollfd& operator=(epollfd&&);
     ~epollfd();
+
+    int epfd, fd;
+    epoll_event e;
+    std::function<void()> f;
+private:
+    epollfd(const epollfd&);
+    epollfd& operator=(const epollfd&);
+};
+
+epollfd::epollfd(int epfd, int fd, int events, std::function<void()> f)
+    : epfd(epfd), fd(fd), f(f)
+{
+    e.events = events;
+    e.data.ptr = &this->f;
+    epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &e);
+}
+
+epollfd::~epollfd()
+{
+    if (epfd < 0)
+        return;
+    epoll_ctl(epfd, EPOLL_CTL_DEL, fd, &e);
+}
+
+epollfd::epollfd(epollfd&& r)
+{
+
+}
+
+struct E;
+typedef std::function<void(E&, int, buffer&)> acont;
+
+struct E
+{
+    E();
+    ~E();
 
     void accept(int fd, std::function<void(int)> cont);
     void aread(int fd, buffer& buf, acont cont);
@@ -51,20 +86,20 @@ struct epollfd
     int efd;
 
 private:
-    epollfd(const epollfd&);
-    epollfd& operator=(const epollfd&);
-    epollfd& operator=(epollfd&&);
-    epollfd(epollfd&&);
+    E(const E&);
+    E& operator=(const E&);
+    E& operator=(E&&);
+    E(E&&);
 };
 
-epollfd::epollfd()
+E::E()
 {
     efd = epoll_create(1);
     if (efd < 0)
         throw std::runtime_error("epoll_create");
 }
 
-epollfd::~epollfd()
+E::~E()
 {
     if (close(efd) < 0)
         throw std::runtime_error("close(efd)");
@@ -72,7 +107,7 @@ epollfd::~epollfd()
 
 int main()
 {
-    epollfd e;
+    E e;
     std::function<int(int)> f = [](int a){ return a + 1;};
     auto a = 123;
     cerr << a;
