@@ -69,6 +69,12 @@ struct async
 
 struct epollfd
 {
+    epollfd(E* root);
+    epollfd(const epollfd&) = delete;
+    epollfd& operator=(const epollfd&) = delete;
+    epollfd& operator=(epollfd&&) = delete;
+    epollfd(epollfd&&) = delete;
+
     void subscribe(int fd, Operation op, scont cont);
     void unsubscribe(int fd, Operation op);
     void waitcycle();
@@ -80,6 +86,10 @@ struct epollfd
     map<int, decltype(epoll_event::events)> events;
     map<pair<int, Operation>, scont> actions;
 };
+
+epollfd::epollfd(E* root)
+    : root(root)
+{}
 
 void epollfd::subscribe(int fd, Operation op, scont cont)
 {
@@ -159,10 +169,11 @@ void epollfd::waitcycle()
     for (int i = 0; i < n; i++)
     {
         epoll_event &e = eventsbuf[i];
+        int fd = e.data.fd;
         if (e.events & EPOLLIN)
-            actions[{e.data.fd, Operation::IN}]();
+            actions[{fd, Operation::IN}]();
         if (e.events & EPOLLOUT)
-            actions[{e.data.fd, Operation::OUT}]();
+            actions[{fd, Operation::OUT}]();
     }
 }
 
