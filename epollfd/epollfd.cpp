@@ -8,6 +8,7 @@
 #include <iostream>
 #include <vector>
 #include <map>
+#include <set>
 
 using namespace std;
 
@@ -34,38 +35,28 @@ struct buffer
     {
         return pos == SIZE;
     }
+
+    char* begin()
+    {
+        return buf + pos;
+    }
 };
 
 struct E;
-typedef std::function<void(E*, int, buffer&)> rcont;
-typedef std::function<void(E*, int, buffer&)> wcont;
+struct epollfd;
+struct async;
+typedef std::function<void(E*, int fd, buffer&, int rd)> rcont;
+typedef std::function<void(E*, int fd, buffer&, int wr)> wcont;
 typedef std::function<void(void)> scont;
 
 template<typename T>
 T make();
-
-struct E
-{
-    void aread(int fd, buffer& buf, rcont cont);
-    void awrite(int fd, buffer& buf, wcont cont);
-    void waitcycle();
-};
 
 enum class Operation
 {
     IN, OUT, AC
 };
 auto allOperations = { Operation::IN, Operation::OUT, Operation::AC};
-
-struct async
-{
-    async(int );
-
-    int fd;
-    int epfd;
-    bool valid;
-    async* pthis;
-};
 
 struct epollfd
 {
@@ -74,6 +65,7 @@ struct epollfd
     epollfd& operator=(const epollfd&) = delete;
     epollfd& operator=(epollfd&&) = delete;
     epollfd(epollfd&&) = delete;
+    ~epollfd();
 
     void subscribe(int fd, Operation op, scont cont);
     void unsubscribe(int fd, Operation op);
@@ -85,7 +77,108 @@ struct epollfd
     E* root;
     map<int, decltype(epoll_event::events)> events;
     map<pair<int, Operation>, scont> actions;
+    set<async> alive;
 };
+
+struct async
+{
+    async();
+    async(Operation op, scont cont);
+    ~async();
+
+    void invalidate();
+    bool isValid() const;
+
+    bool operator<(const async&) const;
+    bool operator==(const async&) const;
+
+    int fd;
+    int epfd;
+    bool valid;
+    E* root;
+    async* pthis;
+    scont cont;
+};
+
+struct E
+{
+    E();
+    ~E();
+
+    void aread(int fd, buffer& buf, rcont cont);
+    void awrite(int fd, buffer& buf, wcont cont);
+    void waitcycle();
+
+    epollfd epfd;
+};
+
+async::async()
+    : valid(false)
+    , pthis(new async)
+{}
+
+bool async::isValid() const
+{
+    return valid;
+}
+
+async::invalidate()
+{
+    valid = false;
+    fd = -1;
+}
+
+async::~async()
+{
+    if (isValid())
+    {
+        
+    }
+    delete pthis;
+}
+
+bool async::operator<(const async& a) const
+{
+    if (fd != a.fd)
+        return fd < a.fd;
+    if (epfd != a.epfd)
+        return epfd < a.epfd;
+    if (valid != a.valid)
+        return valid;
+    return reinterpret_cast<intptr_t>(pthis) < reinterpret_cast<intptr_t>(a.pthis);
+}
+
+bool async::operator==(const async& a) const
+{
+    if (fd != a.fd)
+        return false;
+    if (epfd != a.epfd)
+        return false;
+    if (valid != a.valid)
+        return false;
+    return reinterpret_cast<intptr_t>(pthis) == reinterpret_cast<intptr_t>(a.pthis);
+}
+
+
+
+
+E::E()
+    : epfd(this)
+{}
+
+E::~E()
+{
+}
+
+void E::aread(int fd, buffer& buf, rcont cont)
+{
+    scont newCont = [fd, &buf, &cont, this]()
+    {
+        int n = read(fd, buf.begin(), buf.freeSize());
+        cont(this, fd, buf, n);
+    };
+    
+}
 
 epollfd::epollfd(E* root)
     : root(root)
@@ -175,6 +268,21 @@ void epollfd::waitcycle()
         if (e.events & EPOLLOUT)
             actions[{fd, Operation::OUT}]();
     }
+}
+
+epollfd::~epollfd()
+{
+    for (auto p : events)
+    {
+        if (p.second)
+        {
+            epoll_event tmp;
+            int e = epoll_ctl(epfd, EPOLL_CTL_DEL, p.first, &tmp);
+            if (e < 0)
+                throw std::runtime_error("~epollfd::clear_epoll");
+        }
+    }
+    close(epfd);
 }
 
 int main()
