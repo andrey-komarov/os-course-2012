@@ -45,7 +45,10 @@ void EpollFD::waitcycle()
     {
         epoll_event& cur = tmp[i];
         for (auto action : {EPOLLIN, EPOLLOUT})
-            actions[{static_cast<int>(cur.data.fd), action}]();
+        {
+            if (cur.events & action)
+                actions[{static_cast<int>(cur.data.fd), action}]();
+        }
     }
 }
 

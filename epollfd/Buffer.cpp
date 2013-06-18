@@ -6,7 +6,7 @@
 Buffer::Buffer(size_t size)
     : buf(new char[size])
     , pos(0)
-    , size(0)
+    , size(size)
     , magic(MAGIC)
 {}
 

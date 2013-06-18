@@ -52,6 +52,7 @@ bool ASyncOperation::operator==(const ASyncOperation& op) const
 void ASyncOperation::setCont(scont c)
 {
     cont = c;
+    root->actions[{fd, events}] = c;
 }
 
 ASyncOperation** ASyncOperation::getPthis()
