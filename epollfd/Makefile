@@ -5,6 +5,7 @@ all : Buffer.o EpollFD.o ASyncOperation.o main.o main
 
 debug :
 	${CC} ${CFLAGS} *.cpp -o main
+	gdb -tui main
 
 Buffer.o : Buffer.cpp
 	${CC} ${CFLAGS} -c -o Buffer.o Buffer.cpp

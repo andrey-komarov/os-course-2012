@@ -13,7 +13,8 @@ ASyncOperation& ASyncOperation::operator=(ASyncOperation&& op)
     std::swap(fd, op.fd);
     std::swap(events, op.events);
     std::swap(cont, op.cont);
-    *pthis = this;
+    *op.pthis = this;
+    pthis = op.pthis;
     op.valid = false;
     return *this;
 }
