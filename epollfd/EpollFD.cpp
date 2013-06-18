@@ -21,15 +21,33 @@ EpollFD::~EpollFD()
 
 void EpollFD::aread(int fd, Buffer& buf, rcont cont)
 {
-    scont newCont = [fd, &buf, this, cont]()
+    ASyncOperation op(this, fd, EPOLLIN, nullptr);
+    ASyncOperation** me = op.getPthis();
+    scont newCont = [me, fd, &buf, this, cont]()
     {
         int n = read(fd, buf.writeTo(), buf.writeAvaliable());
         buf.peek(n);
+        alive.erase(**me);
         cont(this, fd, buf, n);
     };
-//    ASyncOperation op;
+    op.setCont(newCont);
+
+    alive.insert(std::move(op));
 }
 
+void EpollFD::waitcycle()
+{
+    epoll_event tmp[10];
+    int n = epoll_wait(epfd, tmp, sizeof(tmp) / sizeof(epoll_event), -1);
+    if (n < 0)
+        throw std::runtime_error("epoll_wait");
+    for (int i = 0; i < n; i++)
+    {
+        epoll_event& cur = tmp[i];
+        for (auto action : {EPOLLIN, EPOLLOUT})
+            actions[{static_cast<int>(cur.data.fd), action}]();
+    }
+}
 
 void EpollFD::subscribe(int fd, uint32_t event, scont cont)
 {

@@ -23,6 +23,9 @@ struct ASyncOperation
 
     ~ASyncOperation();
 
+    void setCont(scont); // :'(
+    ASyncOperation** getPthis();
+
     bool operator<(const ASyncOperation&) const;
     bool operator==(const ASyncOperation&) const;
 private:
@@ -31,6 +34,7 @@ private:
     int fd;
     int events;
     scont cont;
+    ASyncOperation **pthis;
 };
 
 struct EpollFD
@@ -44,6 +48,7 @@ struct EpollFD
 
     void aread(int fd, Buffer& buf, rcont cont);
 
+    void waitcycle();
 private:
     void subscribe(int fd, uint32_t events, scont cont);
     void unsubscribe(int fd, uint32_t events);
