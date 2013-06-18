@@ -45,8 +45,15 @@ struct EpollFD
     void aread(int fd, Buffer& buf, rcont cont);
 
 private:
+    void subscribe(int fd, uint32_t events, scont cont);
+    void unsubscribe(int fd, uint32_t events);
+
     std::set<ASyncOperation> alive;
+    std::map<int, uint32_t> events;
+    std::map<std::pair<int, uint32_t>, scont> actions;
     int epfd;
+
+    friend class ASyncOperation;
 };
 
 #endif // EPOLLFD_H
