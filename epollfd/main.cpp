@@ -8,22 +8,26 @@ int main()
 {
     Buffer buf(4);
     EpollFD poll;
+    cerr << &poll << " poll\n";
     std::function<void(EpollFD*, int, Buffer&, int)> cont 
-        = [&cont](EpollFD* epoll, int fd, Buffer& buf, int rd)
+        = [&poll, &cont](EpollFD* epoll, int fd, Buffer& buf, int rd)
         {
+            cerr << epoll << " epoll\n";
+            cerr << &poll << " poll\n";
+            cerr << "Running cont\n";
             if (rd == 0)
             {
                 cerr << "Done\n";
             }
             else
             {
-                cerr << "Read " << rd << " bytes\n";
                 buf.drop(buf.readAvaliable());
-                epoll->aread(0, buf, cont); // WTF how it's possible?
+                cerr << "Read " << rd << " bytes\n";
+                epoll->aread(0, buf, cont); // WTF crash here
             }
         };
 
     poll.aread(0, buf, cont);
-    while (true)
+    //while (true)
         poll.waitcycle();
 }

@@ -1,9 +1,9 @@
 #include "EpollFD.h"
 
-ASyncOperation::ASyncOperation(EpollFD* root, int fd, int events, scont cont)
+ASyncOperation::ASyncOperation(EpollFD& root, int fd, int events, const scont& cont)
     : root(root), fd(fd), events(events), cont(cont), pthis(new ASyncOperation*)
 {
-    root->subscribe(fd, events, cont);
+    root.subscribe(fd, events, cont);
 }
 
 ASyncOperation& ASyncOperation::operator=(ASyncOperation&& op)
@@ -20,8 +20,15 @@ ASyncOperation& ASyncOperation::operator=(ASyncOperation&& op)
 }
 
 ASyncOperation::ASyncOperation(ASyncOperation&& op)
+    : root(op.root)
+    , valid(op.valid)
+    , fd(op.fd)
+    , events(op.events)
 {
-    *this = std::move(op);
+    std::swap(cont, op.cont);
+    *op.pthis = this;
+    pthis = op.pthis;
+    op.valid = false;
 }
 
 ASyncOperation::~ASyncOperation()
@@ -29,7 +36,7 @@ ASyncOperation::~ASyncOperation()
     if (valid)
     {
         delete pthis;
-        root->unsubscribe(fd, events);
+        root.unsubscribe(fd, events);
     }
 }
 
@@ -52,7 +59,7 @@ bool ASyncOperation::operator==(const ASyncOperation& op) const
 void ASyncOperation::setCont(scont c)
 {
     cont = c;
-    root->actions[{fd, events}] = c;
+    root.actions[{fd, events}] = c;
 }
 
 ASyncOperation** ASyncOperation::getPthis()

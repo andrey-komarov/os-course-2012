@@ -5,9 +5,13 @@
 
 #include <exception>
 
+#include <iostream>
+using std::cerr;
+
 EpollFD::EpollFD()
     : epfd(epoll_create(1))
 {
+    cerr << "EpollFD::EpollFD()\n";
     if (epfd < 0)
         throw std::runtime_error("epoll create error");
 }
@@ -19,16 +23,16 @@ EpollFD::~EpollFD()
         throw std::runtime_error("epoll close");
 }
 
-void EpollFD::aread(int fd, Buffer& buf, rcont cont)
+void EpollFD::aread(int fd, Buffer& buf, const rcont& cont)
 {
-    ASyncOperation op(this, fd, EPOLLIN, nullptr);
+    ASyncOperation op(*this, fd, EPOLLIN, nullptr);
     ASyncOperation** me = op.getPthis();
     scont newCont = [me, fd, &buf, this, cont]()
     {
         int n = read(fd, buf.writeTo(), buf.writeAvaliable());
         buf.peek(n);
         alive.erase(**me);
-        cont(this, fd, buf, n);
+        cont(*this, fd, buf, n);
     };
     op.setCont(newCont);
 
@@ -52,7 +56,7 @@ void EpollFD::waitcycle()
     }
 }
 
-void EpollFD::subscribe(int fd, uint32_t event, scont cont)
+void EpollFD::subscribe(int fd, uint32_t event, const scont& cont)
 {
     uint32_t& currentEvents = events[fd];
     if (currentEvents & event)
