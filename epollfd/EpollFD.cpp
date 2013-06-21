@@ -25,29 +25,32 @@ EpollFD::~EpollFD()
 void EpollFD::aread(int fd, Buffer& buf, rcont cont)
 {
     ASyncOperation op(this, fd, EPOLLIN, nullptr);
-    //cerr << "op = " << op << "\n";
     ASyncOperation** me = op.getPthis();
     scont newCont = [me, fd, &buf, this, cont]()
     {
         int n = read(fd, buf.writeTo(), buf.writeAvaliable());
         buf.peek(n);
-        //cerr << "Removing " << **me << "\n";
-        //for (const ASyncOperation& x : alive)
-        //    cerr << x << " ";
-        //cerr << "\n";
         alive.erase(**me);
-        //for (const ASyncOperation& x : alive)
-        //    cerr << x << " ";
-        //cerr << "\n";
-
         cont(this, fd, buf, n);
     };
     op.setCont(newCont);
-
-    //cerr << "Inserting " << op << " to alive\n";
     alive.insert(std::move(op));
 }
 
+void EpollFD::awrite(int fd, Buffer& buf, wcont cont)
+{
+    ASyncOperation op(this, fd, EPOLLOUT, nullptr);
+    ASyncOperation** me = op.getPthis();
+    scont newCont = [me, fd, &buf, this, cont]()
+    {
+        int n = write(fd, buf.readFrom(), buf.readAvaliable());
+        buf.drop(n);
+        alive.erase(**me);
+        cont(this, fd, buf, n);
+    };
+    op.setCont(newCont);
+    alive.insert(std::move(op));
+}
 void EpollFD::waitcycle()
 {
     epoll_event tmp[10];

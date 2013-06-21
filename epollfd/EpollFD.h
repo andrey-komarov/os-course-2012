@@ -12,6 +12,7 @@
 struct EpollFD;
 struct ASyncOperation;
 typedef std::function<void(EpollFD*, int fd, Buffer& buf, int rd)> rcont;
+typedef std::function<void(EpollFD*, int fd, Buffer& buf, int rd)> wcont;
 typedef std::function<void(void)> scont;
 
 struct ASyncOperation
@@ -53,6 +54,7 @@ struct EpollFD
     ~EpollFD();
 
     void aread(int fd, Buffer& buf, rcont cont);
+    void awrite(int fd, Buffer& buf, wcont cont);
 
     void waitcycle();
 private:
