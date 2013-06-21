@@ -9,12 +9,12 @@
 
 struct EpollFD;
 struct ASyncOperation;
-typedef std::function<void(EpollFD&, int fd, Buffer& buf, int rd)> rcont;
+typedef std::function<void(EpollFD*, int fd, Buffer& buf, int rd)> rcont;
 typedef std::function<void(void)> scont;
 
 struct ASyncOperation
 {
-    ASyncOperation(EpollFD& root, int fd, int events, const scont& cont);
+    ASyncOperation(EpollFD* root, int fd, int events, scont cont);
 
     ASyncOperation(const ASyncOperation&) = delete;
     ASyncOperation(ASyncOperation&&);
@@ -29,7 +29,7 @@ struct ASyncOperation
     bool operator<(const ASyncOperation&) const;
     bool operator==(const ASyncOperation&) const;
 private:
-    EpollFD& root;
+    EpollFD* root;
     bool valid;
     int fd;
     int events;
@@ -46,11 +46,11 @@ struct EpollFD
     EpollFD& operator=(EpollFD&&) = delete;
     ~EpollFD();
 
-    void aread(int fd, Buffer& buf, const rcont& cont);
+    void aread(int fd, Buffer& buf, rcont cont);
 
     void waitcycle();
 private:
-    void subscribe(int fd, uint32_t events, const scont& cont);
+    void subscribe(int fd, uint32_t events, scont cont);
     void unsubscribe(int fd, uint32_t events);
 
     std::set<ASyncOperation> alive;
