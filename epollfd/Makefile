@@ -21,3 +21,6 @@ main.o : main.cpp EpollFD.o
 
 main : main.o ASyncOperation.o EpollFD.o Buffer.o
 	${CC} ${CFLAGS} -s main.o ASyncOperation.o EpollFD.o Buffer.o -o main
+
+edit:
+	vim -p EpollFD.h EpollFD.cpp ASyncOperation.cpp main.cpp

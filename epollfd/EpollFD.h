@@ -3,6 +3,8 @@
 
 #include "Buffer.h"
 
+#include <ostream>
+
 #include <functional>
 #include <set>
 #include <map>
@@ -35,7 +37,11 @@ private:
     int events;
     scont cont;
     ASyncOperation **pthis;
+
+    friend std::ostream& operator<<(std::ostream&, const ASyncOperation&);
 };
+
+std::ostream& operator<<(std::ostream&, const ASyncOperation&);
 
 struct EpollFD
 {

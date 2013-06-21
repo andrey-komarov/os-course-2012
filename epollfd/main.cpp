@@ -8,13 +8,10 @@ int main()
 {
     Buffer buf(4);
     EpollFD poll;
-    cerr << &poll << " poll\n";
+    //cerr << &poll << " poll\n";
     std::function<void(EpollFD*, int, Buffer&, int)> cont 
         = [&poll, &cont](EpollFD* epoll, int fd, Buffer& buf, int rd)
         {
-            cerr << epoll << " epoll\n";
-            cerr << &poll << " poll\n";
-            cerr << "Running cont\n";
             if (rd == 0)
             {
                 cerr << "Done\n";
@@ -28,6 +25,6 @@ int main()
         };
 
     poll.aread(0, buf, cont);
-    //while (true)
+    while (true)
         poll.waitcycle();
 }

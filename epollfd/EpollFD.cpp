@@ -5,6 +5,9 @@
 
 #include <exception>
 
+#include <iostream>
+using namespace std;
+
 EpollFD::EpollFD()
     : epfd(epoll_create(1))
 {
@@ -22,16 +25,26 @@ EpollFD::~EpollFD()
 void EpollFD::aread(int fd, Buffer& buf, rcont cont)
 {
     ASyncOperation op(this, fd, EPOLLIN, nullptr);
+    //cerr << "op = " << op << "\n";
     ASyncOperation** me = op.getPthis();
     scont newCont = [me, fd, &buf, this, cont]()
     {
         int n = read(fd, buf.writeTo(), buf.writeAvaliable());
         buf.peek(n);
+        //cerr << "Removing " << **me << "\n";
+        //for (const ASyncOperation& x : alive)
+        //    cerr << x << " ";
+        //cerr << "\n";
         alive.erase(**me);
+        //for (const ASyncOperation& x : alive)
+        //    cerr << x << " ";
+        //cerr << "\n";
+
         cont(this, fd, buf, n);
     };
     op.setCont(newCont);
 
+    //cerr << "Inserting " << op << " to alive\n";
     alive.insert(std::move(op));
 }
 
@@ -54,6 +67,7 @@ void EpollFD::waitcycle()
 
 void EpollFD::subscribe(int fd, uint32_t event, scont cont)
 {
+    //cerr << "Subscribing to fd " << fd << " event " << event << "\n";
     uint32_t& currentEvents = events[fd];
     if (currentEvents & event)
         throw std::runtime_error("adding already existing action");
@@ -69,6 +83,7 @@ void EpollFD::subscribe(int fd, uint32_t event, scont cont)
 
 void EpollFD::unsubscribe(int fd, uint32_t event)
 {
+    //cerr << "Unsubscribing fd=" << fd << ", event=" << event << "\n";
     uint32_t& currentEvents = events[fd];
     if ((currentEvents & event) != event)
         throw std::runtime_error("removing non-existing action");
