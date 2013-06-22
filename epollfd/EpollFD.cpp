@@ -77,7 +77,7 @@ void EpollFD::subscribe(int fd, uint32_t event, scont cont)
     currentEvents |= event;
     actions[{fd, event}] = cont;
     epoll_event e;
-    e.events = event;
+    e.events = currentEvents;
     e.data.fd = fd;
     int op = currentEvents == event ? EPOLL_CTL_ADD : EPOLL_CTL_MOD;
     if (epoll_ctl(epfd, op, fd, &e) < 0)
