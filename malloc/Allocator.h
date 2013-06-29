@@ -5,9 +5,14 @@ template<typename... Args>
 struct Allocatorable
 {};
 
-template<typename A, template... Args>
+template<typename A, typename... Args>
 struct Allocator
 {
+private:
+    A left;
+    Allocator<Args...> right;
+public:
+
     void* malloc(size_t size)
     {
         if (left.wantToMalloc(size))
@@ -29,16 +34,12 @@ struct Allocator
 
     bool wantToFree(void* ptr)
     {
-        return left.wantToFree(size) || right.wantToFree(size);
+        return left.wantToFree(ptr) || right.wantToFree(ptr);
     }
-
-private:
-    A left;
-    Allocator<Args> right;
 };
 
 template<typename A>
-struct Allocator : Allocatorable<A>
+struct Allocator<A>
 {
     void* malloc(size_t size)
     {
@@ -57,11 +58,45 @@ struct Allocator : Allocatorable<A>
 
     bool wantToFree(void* ptr)
     {
-        return alloc.wantToFree(size);
+        return alloc.wantToFree(ptr);
     }
 
 private:
     A alloc;
+};
+
+template<typename Alloc>
+struct LoggingAllocator
+{
+private:
+    typedef Allocator<Alloc> A;
+    A alloc;
+public:
+
+    void* malloc(size_t size)
+    {
+        fprintf(stderr, "malloc(%ld) = ", size);
+        void* res = alloc.malloc(size);
+        fprintf(stderr, "%lx\n", reinterpret_cast<intptr_t>(res));
+        return res;
+    }
+
+    void free(void* ptr)
+    {
+        fprintf(stderr, "free(%lx)\n", ptr);
+        alloc.free(ptr);
+    }
+
+    bool wantToFree(void* ptr)
+    {
+        return alloc.wantToFree(ptr);
+    }
+
+    bool wantToMalloc(void* ptr)
+    {
+        return alloc.wantToFree(ptr);
+    }
+
 };
 
 #endif // ALLOCATOR_H

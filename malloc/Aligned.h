@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <sys/mman.h>
 
 template<size_t ALIGNMENT = (1<<16)>
 struct LargeAligned
@@ -18,8 +19,8 @@ public:
         void * res = reinterpret_cast<void*>((reinterpret_cast<intptr_t>(ptr) + ALIGNMENT) 
                 / ALIGNMENT * ALIGNMENT);
         char * resC = reinterpret_cast<char*>(res);
-        *(resC - sizeof(size_t)) = size + add;
-        *(resC - sizeof(size_t) - sizeof(void*)) = ptr;
+        *reinterpret_cast<size_t*>(resC - sizeof(size_t)) = size + add;
+        *reinterpret_cast<void**>(resC - sizeof(size_t) - sizeof(void*)) = ptr;
         return res;
     }
 

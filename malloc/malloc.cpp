@@ -3,8 +3,15 @@
 #include <iostream>
 using std::cerr;
 
+#include "Aligned.h"
+#include "Allocator.h"
+
+typedef LoggingAllocator<Allocator<LargeAligned<>>>
+    MySuperMegaAllocator;
+
+MySuperMegaAllocator alloc;
+
 void* malloc(size_t size) noexcept
 {
-    cerr << "malloc(" << size << ")\n";
-    return NULL;
+    return alloc.malloc(size);
 }
