@@ -4,6 +4,7 @@
 #include <stddef.h>
 
 const size_t SMALL = 32;
+const size_t PAGE_SIZE = 4096;
 
 extern "C"
 {
