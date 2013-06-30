@@ -19,7 +19,7 @@ main.o : main.c
 	gcc -g -c main.c -o main.o
 
 main-debug:
-	gcc ${CFLAGS} main.c -o main
+	gcc -g main.c -o main
 
 edit : 
 	vim -p *.cpp *.h Makefile

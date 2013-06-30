@@ -30,8 +30,9 @@ void* malloc(size_t size)
 
 void free(void* ptr)
 {
-    printf("1324");
-//    alloc.free(ptr);
+    if (ptr == NULL)
+        return;
+    alloc.free(ptr);
 }
 
 void* calloc(size_t nmemb, size_t size)
