@@ -36,6 +36,14 @@ public:
     {
         return left.wantToFree(ptr) || right.wantToFree(ptr);
     }
+
+    size_t allocatedSize(void* ptr)
+    {
+        if (left.wantToFree(ptr))
+            return left.allocatedSize(ptr);
+        else
+            return right.allocatedSize(ptr);
+    }
 };
 
 template<typename A>
@@ -61,6 +69,11 @@ struct Allocator<A>
         return alloc.wantToFree(ptr);
     }
 
+    size_t allocatedSize(void* ptr)
+    {
+        return alloc.allocatedSize(ptr);
+    }
+
 private:
     A alloc;
 };
@@ -83,7 +96,7 @@ public:
 
     void free(void* ptr)
     {
-        fprintf(stderr, "free(%lx)\n", ptr);
+        fprintf(stderr, "free(%lx)\n", reinterpret_cast<intptr_t>(ptr));
         alloc.free(ptr);
     }
 
@@ -95,6 +108,11 @@ public:
     bool wantToMalloc(void* ptr)
     {
         return alloc.wantToFree(ptr);
+    }
+
+    size_t allocatedSize(void* ptr)
+    {
+        return alloc.allocatedSize(ptr);
     }
 
 };

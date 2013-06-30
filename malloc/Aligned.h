@@ -11,12 +11,18 @@ struct LargeAligned
 //  BEG_SIZ_MEM....
 //          ^
 public:
+    size_t allocatedSize(void* ptr)
+    {
+        char* ptrC = reinterpret_cast<char*>(ptr);
+        return *reinterpret_cast<size_t*>(ptrC - sizeof(size_t));
+    }
+
     void* malloc(size_t size)
     {
         size_t add = sizeof(size_t) + sizeof(size_t) + sizeof(void*) + ALIGNMENT;
         void * ptr = mmap(NULL, size + add, PROT_READ | PROT_WRITE,
                 MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-        void * res = reinterpret_cast<void*>((reinterpret_cast<intptr_t>(ptr) + ALIGNMENT) 
+        void * res = reinterpret_cast<void*>((reinterpret_cast<intptr_t>(ptr) + add) 
                 / ALIGNMENT * ALIGNMENT);
         char * resC = reinterpret_cast<char*>(res);
         *reinterpret_cast<size_t*>(resC - sizeof(size_t)) = size + add;
@@ -28,7 +34,7 @@ public:
     {
         char* ptrC = reinterpret_cast<char*>(ptr);
         void* addr = *reinterpret_cast<void**>(ptrC - sizeof(size_t) - sizeof(void*));
-        size_t size = *reinterpret_cast<size_t*>(ptrC - sizeof(size_t));
+        size_t size = allocatedSize(ptr);
         munmap(addr, size);
     }
 
@@ -42,6 +48,7 @@ public:
         intptr_t ptrI = reinterpret_cast<intptr_t>(ptr);
         return ptrI % ALIGNMENT == 0;
     }
+    
 };
 
 #endif // ALIGNED_H
