@@ -32,7 +32,7 @@ void free(void* ptr)
 {
     if (ptr == NULL)
         return;
-    alloc.free(ptr);
+//    alloc.free(ptr);
 }
 
 void* calloc(size_t nmemb, size_t size)
